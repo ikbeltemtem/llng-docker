@@ -1,0 +1,62 @@
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: llng-postgres
+    environment:
+      POSTGRES_USER: lemon
+      POSTGRES_PASSWORD: lemon
+      POSTGRES_DB: lemon
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+      - ./dbi/init-lemon.sql:/docker-entrypoint-initdb.d/init-lemon.sql:ro
+  
+  ldap:
+    image: osixia/openldap:1.5.0
+    container_name: llng-ldap
+    ports:
+      - "1389:389"
+    environment:
+      LDAP_ORGANISATION: "Example Org"
+      LDAP_DOMAIN: "example.org"
+      LDAP_ADMIN_PASSWORD: admin
+    volumes:
+      - ./bootstrap:/container/service/slapd/assets/config/bootstrap/ldif/custom
+    command: ["--copy-service", "--loglevel", "debug"] 
+  lemonldap:
+    image: coudot/lemonldap-ng:2.20.0
+    container_name: llng
+    environment:
+      SSODOMAIN: example.com
+      LOGLEVEL: debug
+    ports:
+      - "80:80"
+    volumes:
+      - ./lemonldap/data/modules/:/usr/share/lemonldap-ng/portal/htdocs/static/common/modules/
+      - ./lemonldap/data/bootstrap/:/usr/share/lemonldap-ng/portal/templates/poste/
+      - ./lemonldap/data/css/:/usr/share/lemonldap-ng/portal/htdocs/static/poste/css/
+      - ./lemonldap/data/js/:/usr/share/lemonldap-ng/portal/htdocs/static/poste/js/
+      - ./lemonldap/conf/lmConf-1.json:/var/lib/lemonldap-ng/conf/lmConf-1.json
+      
+  oidc-client:
+    image: temmb/simple-oidc-client
+    container_name: oidc-client
+    depends_on:
+      - lemonldap 
+    ports:
+      - "5000:5000"
+    extra_hosts:
+      - "auth.example.com:192.168.1.110"
+    command:
+      [
+        "--port", "5000",
+        "--issuer", "http://auth.example.com/",
+        "--client-id", "hflC845LFBSbd5268jdgFISKZ",
+        "--client-secret", "secret",
+        "--redirect-uri", "http://localhost:5000/callback",
+        "--opaque", "false",
+        "--alg", "RS256"
+      ]
+
