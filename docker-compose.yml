@@ -41,7 +41,7 @@ services:
       - ./lemonldap/conf/lmConf-1.json:/var/lib/lemonldap-ng/conf/lmConf-1.json
       
   oidc-client:
-    image: temmb/simple-oidc-client
+    image: temmb/simple-oidc-client:0.1.0
     container_name: oidc-client
     depends_on:
       - lemonldap 
